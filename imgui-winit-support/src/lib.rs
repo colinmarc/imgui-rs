@@ -73,7 +73,7 @@
 //! })
 //! ```
 
-use imgui::{self, BackendFlags, ConfigFlags, Context, Io, Key, Ui};
+use imgui::{self, BackendFlags, ConfigFlags, Context, Io, Ui};
 use std::cmp::Ordering;
 
 // Re-export winit to make it easier for users to use the correct version.
@@ -82,10 +82,11 @@ use winit::dpi::{LogicalPosition, LogicalSize};
 
 use winit::{
     error::ExternalError,
-    event::{
-        DeviceEvent, ElementState, Event, KeyboardInput, MouseButton, MouseScrollDelta, TouchPhase,
-        VirtualKeyCode, WindowEvent,
-    },
+    event::{ElementState, Event, MouseButton, MouseScrollDelta, TouchPhase, WindowEvent},
+    keyboard::Key as WinitKey,
+    keyboard::KeyLocation,
+    keyboard::NamedKey,
+    platform::modifier_supplement::KeyEventExtModifierSupplement,
     window::{CursorIcon as MouseCursor, Window},
 };
 
@@ -112,7 +113,7 @@ fn to_winit_cursor(cursor: imgui::MouseCursor) -> MouseCursor {
         imgui::MouseCursor::ResizeEW => MouseCursor::EwResize,
         imgui::MouseCursor::ResizeNESW => MouseCursor::NeswResize,
         imgui::MouseCursor::ResizeNWSE => MouseCursor::NwseResize,
-        imgui::MouseCursor::Hand => MouseCursor::Hand,
+        imgui::MouseCursor::Hand => MouseCursor::Pointer,
         imgui::MouseCursor::NotAllowed => MouseCursor::NotAllowed,
     }
 }
@@ -180,126 +181,126 @@ fn to_imgui_mouse_button(button: MouseButton) -> Option<imgui::MouseButton> {
     }
 }
 
-fn to_imgui_key(keycode: VirtualKeyCode) -> Option<Key> {
-    match keycode {
-        VirtualKeyCode::Tab => Some(Key::Tab),
-        VirtualKeyCode::Left => Some(Key::LeftArrow),
-        VirtualKeyCode::Right => Some(Key::RightArrow),
-        VirtualKeyCode::Up => Some(Key::UpArrow),
-        VirtualKeyCode::Down => Some(Key::DownArrow),
-        VirtualKeyCode::PageUp => Some(Key::PageUp),
-        VirtualKeyCode::PageDown => Some(Key::PageDown),
-        VirtualKeyCode::Home => Some(Key::Home),
-        VirtualKeyCode::End => Some(Key::End),
-        VirtualKeyCode::Insert => Some(Key::Insert),
-        VirtualKeyCode::Delete => Some(Key::Delete),
-        VirtualKeyCode::Back => Some(Key::Backspace),
-        VirtualKeyCode::Space => Some(Key::Space),
-        VirtualKeyCode::Return => Some(Key::Enter),
-        VirtualKeyCode::Escape => Some(Key::Escape),
-        VirtualKeyCode::LControl => Some(Key::LeftCtrl),
-        VirtualKeyCode::LShift => Some(Key::LeftShift),
-        VirtualKeyCode::LAlt => Some(Key::LeftAlt),
-        VirtualKeyCode::LWin => Some(Key::LeftSuper),
-        VirtualKeyCode::RControl => Some(Key::RightCtrl),
-        VirtualKeyCode::RShift => Some(Key::RightShift),
-        VirtualKeyCode::RAlt => Some(Key::RightAlt),
-        VirtualKeyCode::RWin => Some(Key::RightSuper),
-        //VirtualKeyCode::Menu => Some(Key::Menu), // TODO: find out if there is a Menu key in winit
-        VirtualKeyCode::Key0 => Some(Key::Alpha0),
-        VirtualKeyCode::Key1 => Some(Key::Alpha1),
-        VirtualKeyCode::Key2 => Some(Key::Alpha2),
-        VirtualKeyCode::Key3 => Some(Key::Alpha3),
-        VirtualKeyCode::Key4 => Some(Key::Alpha4),
-        VirtualKeyCode::Key5 => Some(Key::Alpha5),
-        VirtualKeyCode::Key6 => Some(Key::Alpha6),
-        VirtualKeyCode::Key7 => Some(Key::Alpha7),
-        VirtualKeyCode::Key8 => Some(Key::Alpha8),
-        VirtualKeyCode::Key9 => Some(Key::Alpha9),
-        VirtualKeyCode::A => Some(Key::A),
-        VirtualKeyCode::B => Some(Key::B),
-        VirtualKeyCode::C => Some(Key::C),
-        VirtualKeyCode::D => Some(Key::D),
-        VirtualKeyCode::E => Some(Key::E),
-        VirtualKeyCode::F => Some(Key::F),
-        VirtualKeyCode::G => Some(Key::G),
-        VirtualKeyCode::H => Some(Key::H),
-        VirtualKeyCode::I => Some(Key::I),
-        VirtualKeyCode::J => Some(Key::J),
-        VirtualKeyCode::K => Some(Key::K),
-        VirtualKeyCode::L => Some(Key::L),
-        VirtualKeyCode::M => Some(Key::M),
-        VirtualKeyCode::N => Some(Key::N),
-        VirtualKeyCode::O => Some(Key::O),
-        VirtualKeyCode::P => Some(Key::P),
-        VirtualKeyCode::Q => Some(Key::Q),
-        VirtualKeyCode::R => Some(Key::R),
-        VirtualKeyCode::S => Some(Key::S),
-        VirtualKeyCode::T => Some(Key::T),
-        VirtualKeyCode::U => Some(Key::U),
-        VirtualKeyCode::V => Some(Key::V),
-        VirtualKeyCode::W => Some(Key::W),
-        VirtualKeyCode::X => Some(Key::X),
-        VirtualKeyCode::Y => Some(Key::Y),
-        VirtualKeyCode::Z => Some(Key::Z),
-        VirtualKeyCode::F1 => Some(Key::F1),
-        VirtualKeyCode::F2 => Some(Key::F2),
-        VirtualKeyCode::F3 => Some(Key::F3),
-        VirtualKeyCode::F4 => Some(Key::F4),
-        VirtualKeyCode::F5 => Some(Key::F5),
-        VirtualKeyCode::F6 => Some(Key::F6),
-        VirtualKeyCode::F7 => Some(Key::F7),
-        VirtualKeyCode::F8 => Some(Key::F8),
-        VirtualKeyCode::F9 => Some(Key::F9),
-        VirtualKeyCode::F10 => Some(Key::F10),
-        VirtualKeyCode::F11 => Some(Key::F11),
-        VirtualKeyCode::F12 => Some(Key::F12),
-        VirtualKeyCode::Apostrophe => Some(Key::Apostrophe),
-        VirtualKeyCode::Comma => Some(Key::Comma),
-        VirtualKeyCode::Minus => Some(Key::Minus),
-        VirtualKeyCode::Period => Some(Key::Period),
-        VirtualKeyCode::Slash => Some(Key::Slash),
-        VirtualKeyCode::Semicolon => Some(Key::Semicolon),
-        VirtualKeyCode::Equals => Some(Key::Equal),
-        VirtualKeyCode::LBracket => Some(Key::LeftBracket),
-        VirtualKeyCode::Backslash => Some(Key::Backslash),
-        VirtualKeyCode::RBracket => Some(Key::RightBracket),
-        VirtualKeyCode::Grave => Some(Key::GraveAccent),
-        VirtualKeyCode::Capital => Some(Key::CapsLock),
-        VirtualKeyCode::Scroll => Some(Key::ScrollLock),
-        VirtualKeyCode::Numlock => Some(Key::NumLock),
-        VirtualKeyCode::Snapshot => Some(Key::PrintScreen),
-        VirtualKeyCode::Pause => Some(Key::Pause),
-        VirtualKeyCode::Numpad0 => Some(Key::Keypad0),
-        VirtualKeyCode::Numpad1 => Some(Key::Keypad1),
-        VirtualKeyCode::Numpad2 => Some(Key::Keypad2),
-        VirtualKeyCode::Numpad3 => Some(Key::Keypad3),
-        VirtualKeyCode::Numpad4 => Some(Key::Keypad4),
-        VirtualKeyCode::Numpad5 => Some(Key::Keypad5),
-        VirtualKeyCode::Numpad6 => Some(Key::Keypad6),
-        VirtualKeyCode::Numpad7 => Some(Key::Keypad7),
-        VirtualKeyCode::Numpad8 => Some(Key::Keypad8),
-        VirtualKeyCode::Numpad9 => Some(Key::Keypad9),
-        VirtualKeyCode::NumpadDecimal => Some(Key::KeypadDecimal),
-        VirtualKeyCode::NumpadDivide => Some(Key::KeypadDivide),
-        VirtualKeyCode::NumpadMultiply => Some(Key::KeypadMultiply),
-        VirtualKeyCode::NumpadSubtract => Some(Key::KeypadSubtract),
-        VirtualKeyCode::NumpadAdd => Some(Key::KeypadAdd),
-        VirtualKeyCode::NumpadEnter => Some(Key::KeypadEnter),
-        VirtualKeyCode::NumpadEquals => Some(Key::KeypadEqual),
-        _ => None,
-    }
-}
+fn to_imgui_key(logical_key: WinitKey, location: KeyLocation) -> Option<imgui::Key> {
+    use KeyLocation::*;
+    use NamedKey::*;
 
-fn handle_key_modifier(io: &mut Io, key: VirtualKeyCode, down: bool) {
-    if key == VirtualKeyCode::LShift || key == VirtualKeyCode::RShift {
-        io.add_key_event(imgui::Key::ModShift, down);
-    } else if key == VirtualKeyCode::LControl || key == VirtualKeyCode::RControl {
-        io.add_key_event(imgui::Key::ModCtrl, down);
-    } else if key == VirtualKeyCode::LAlt || key == VirtualKeyCode::RAlt {
-        io.add_key_event(imgui::Key::ModAlt, down);
-    } else if key == VirtualKeyCode::LWin || key == VirtualKeyCode::RWin {
-        io.add_key_event(imgui::Key::ModSuper, down);
+    match logical_key {
+        WinitKey::Named(named_key) => match (named_key, location) {
+            (Tab, _) => Some(imgui::Key::Tab),
+            (ArrowLeft, _) => Some(imgui::Key::LeftArrow),
+            (ArrowRight, _) => Some(imgui::Key::RightArrow),
+            (ArrowUp, _) => Some(imgui::Key::UpArrow),
+            (ArrowDown, _) => Some(imgui::Key::DownArrow),
+            (PageUp, _) => Some(imgui::Key::PageUp),
+            (PageDown, _) => Some(imgui::Key::PageDown),
+            (Home, _) => Some(imgui::Key::Home),
+            (End, _) => Some(imgui::Key::End),
+            (Insert, _) => Some(imgui::Key::Insert),
+            (Delete, _) => Some(imgui::Key::Delete),
+            (Backspace, _) => Some(imgui::Key::Backspace),
+            (Space, _) => Some(imgui::Key::Space),
+            (Enter, Numpad) => Some(imgui::Key::KeypadEnter),
+            (Enter, _) => Some(imgui::Key::Enter),
+            (Escape, _) => Some(imgui::Key::Escape),
+            (Control, Left) => Some(imgui::Key::LeftCtrl),
+            (Control, Right) => Some(imgui::Key::RightCtrl),
+            (Shift, Left) => Some(imgui::Key::LeftShift),
+            (Shift, Right) => Some(imgui::Key::RightShift),
+            (Alt, Left) => Some(imgui::Key::LeftAlt),
+            (Alt, Right) => Some(imgui::Key::RightAlt),
+            (Super, Left) => Some(imgui::Key::LeftSuper),
+            (Super, Right) => Some(imgui::Key::RightSuper),
+            (ContextMenu, _) => Some(imgui::Key::Menu),
+            (F1, _) => Some(imgui::Key::F1),
+            (F2, _) => Some(imgui::Key::F2),
+            (F3, _) => Some(imgui::Key::F3),
+            (F4, _) => Some(imgui::Key::F4),
+            (F5, _) => Some(imgui::Key::F5),
+            (F6, _) => Some(imgui::Key::F6),
+            (F7, _) => Some(imgui::Key::F7),
+            (F8, _) => Some(imgui::Key::F8),
+            (F9, _) => Some(imgui::Key::F9),
+            (F10, _) => Some(imgui::Key::F10),
+            (F11, _) => Some(imgui::Key::F11),
+            (F12, _) => Some(imgui::Key::F12),
+            (CapsLock, _) => Some(imgui::Key::CapsLock),
+            (ScrollLock, _) => Some(imgui::Key::ScrollLock),
+            (NumLock, _) => Some(imgui::Key::NumLock),
+            (PrintScreen, _) => Some(imgui::Key::PrintScreen),
+            (Pause, _) => Some(imgui::Key::Pause),
+            _ => None,
+        },
+        WinitKey::Dead(ch) => match ch {
+            Some('\u{0300}') => Some(imgui::Key::GraveAccent),
+            _ => None,
+        },
+        WinitKey::Character(ch) => match (ch.as_ref(), location) {
+            ("a", _) => Some(imgui::Key::A),
+            ("b", _) => Some(imgui::Key::B),
+            ("c", _) => Some(imgui::Key::C),
+            ("d", _) => Some(imgui::Key::D),
+            ("e", _) => Some(imgui::Key::E),
+            ("f", _) => Some(imgui::Key::F),
+            ("g", _) => Some(imgui::Key::G),
+            ("h", _) => Some(imgui::Key::H),
+            ("i", _) => Some(imgui::Key::I),
+            ("j", _) => Some(imgui::Key::J),
+            ("k", _) => Some(imgui::Key::K),
+            ("l", _) => Some(imgui::Key::L),
+            ("m", _) => Some(imgui::Key::M),
+            ("n", _) => Some(imgui::Key::N),
+            ("o", _) => Some(imgui::Key::O),
+            ("p", _) => Some(imgui::Key::P),
+            ("q", _) => Some(imgui::Key::Q),
+            ("r", _) => Some(imgui::Key::R),
+            ("s", _) => Some(imgui::Key::S),
+            ("t", _) => Some(imgui::Key::T),
+            ("u", _) => Some(imgui::Key::U),
+            ("v", _) => Some(imgui::Key::V),
+            ("w", _) => Some(imgui::Key::W),
+            ("x", _) => Some(imgui::Key::X),
+            ("y", _) => Some(imgui::Key::Y),
+            ("z", _) => Some(imgui::Key::Z),
+            ("0", Numpad) => Some(imgui::Key::Keypad0),
+            ("1", Numpad) => Some(imgui::Key::Keypad1),
+            ("2", Numpad) => Some(imgui::Key::Keypad2),
+            ("3", Numpad) => Some(imgui::Key::Keypad3),
+            ("4", Numpad) => Some(imgui::Key::Keypad4),
+            ("5", Numpad) => Some(imgui::Key::Keypad5),
+            ("6", Numpad) => Some(imgui::Key::Keypad6),
+            ("7", Numpad) => Some(imgui::Key::Keypad7),
+            ("8", Numpad) => Some(imgui::Key::Keypad8),
+            ("9", Numpad) => Some(imgui::Key::Keypad9),
+            (".", Numpad) => Some(imgui::Key::KeypadDecimal),
+            ("/", Numpad) => Some(imgui::Key::KeypadDivide),
+            ("*", Numpad) => Some(imgui::Key::KeypadMultiply),
+            ("-", Numpad) => Some(imgui::Key::KeypadSubtract),
+            ("+", Numpad) => Some(imgui::Key::KeypadAdd),
+            ("=", Numpad) => Some(imgui::Key::KeypadEqual),
+            ("0", _) => Some(imgui::Key::Alpha0),
+            ("1", _) => Some(imgui::Key::Alpha1),
+            ("2", _) => Some(imgui::Key::Alpha2),
+            ("3", _) => Some(imgui::Key::Alpha3),
+            ("4", _) => Some(imgui::Key::Alpha4),
+            ("5", _) => Some(imgui::Key::Alpha5),
+            ("6", _) => Some(imgui::Key::Alpha6),
+            ("7", _) => Some(imgui::Key::Alpha7),
+            ("8", _) => Some(imgui::Key::Alpha8),
+            ("9", _) => Some(imgui::Key::Alpha9),
+            ("'", _) => Some(imgui::Key::Apostrophe),
+            (",", _) => Some(imgui::Key::Comma),
+            ("-", _) => Some(imgui::Key::Minus),
+            (".", _) => Some(imgui::Key::Period),
+            ("/", _) => Some(imgui::Key::Slash),
+            (";", _) => Some(imgui::Key::Semicolon),
+            ("=", _) => Some(imgui::Key::Equal),
+            ("[", _) => Some(imgui::Key::LeftBracket),
+            ("\\", _) => Some(imgui::Key::Backslash),
+            ("]", _) => Some(imgui::Key::RightBracket),
+            _ => None,
+        },
+        WinitKey::Unidentified(_) => None,
     }
 }
 
@@ -409,21 +410,6 @@ impl WinitPlatform {
             } if window_id == window.id() => {
                 self.handle_window_event(io, window, event);
             }
-            // Track key release events outside our window. If we don't do this,
-            // we might never see the release event if some other window gets focus.
-            Event::DeviceEvent {
-                event:
-                    DeviceEvent::Key(KeyboardInput {
-                        state: ElementState::Released,
-                        virtual_keycode: Some(key),
-                        ..
-                    }),
-                ..
-            } => {
-                if let Some(key) = to_imgui_key(key) {
-                    io.add_key_event(key, false);
-                }
-            }
             _ => (),
         }
     }
@@ -459,21 +445,15 @@ impl WinitPlatform {
                 // We need to track modifiers separately because some system like macOS, will
                 // not reliably send modifier states during certain events like ScreenCapture.
                 // Gotta let the people show off their pretty imgui widgets!
-                io.add_key_event(Key::ModShift, modifiers.shift());
-                io.add_key_event(Key::ModCtrl, modifiers.ctrl());
-                io.add_key_event(Key::ModAlt, modifiers.alt());
-                io.add_key_event(Key::ModSuper, modifiers.logo());
+                let state = modifiers.state();
+                io.add_key_event(imgui::Key::ModShift, state.shift_key());
+                io.add_key_event(imgui::Key::ModCtrl, state.control_key());
+                io.add_key_event(imgui::Key::ModAlt, state.alt_key());
+                io.add_key_event(imgui::Key::ModSuper, state.super_key());
             }
-            WindowEvent::KeyboardInput {
-                input:
-                    KeyboardInput {
-                        virtual_keycode: Some(key),
-                        state,
-                        ..
-                    },
-                ..
-            } => {
-                let pressed = state == ElementState::Pressed;
+            WindowEvent::KeyboardInput { ref event, .. } => {
+                let logical_key = event.key_without_modifiers();
+                let pressed = event.state == ElementState::Pressed;
 
                 // We map both left and right ctrl to `ModCtrl`, etc.
                 // imgui is told both "left control is pressed" and
@@ -481,18 +461,29 @@ impl WinitPlatform {
                 // applications to use either general "ctrl" or a
                 // specific key. Same applies to other modifiers.
                 // https://github.com/ocornut/imgui/issues/5047
-                handle_key_modifier(io, key, pressed);
+                if let WinitKey::Named(k) = logical_key {
+                    match k {
+                        NamedKey::Shift => io.add_key_event(imgui::Key::ModShift, pressed),
+                        NamedKey::Control => io.add_key_event(imgui::Key::ModCtrl, pressed),
+                        NamedKey::Alt => io.add_key_event(imgui::Key::ModAlt, pressed),
+                        NamedKey::Super => io.add_key_event(imgui::Key::ModSuper, pressed),
+                        _ => (),
+                    }
+                }
 
                 // Add main key event
-                if let Some(key) = to_imgui_key(key) {
+                if let Some(key) = to_imgui_key(logical_key, event.location) {
                     io.add_key_event(key, pressed);
                 }
-            }
-            WindowEvent::ReceivedCharacter(ch) => {
-                // Exclude the backspace key ('\u{7f}'). Otherwise we will insert this char and then
-                // delete it.
-                if ch != '\u{7f}' {
-                    io.add_input_character(ch)
+
+                if let Some(ref s) = event.text {
+                    for ch in s.chars() {
+                        // Exclude the backspace key ('\u{7f}'). Otherwise we will insert this char and then
+                        // delete it.
+                        if ch != '\u{7f}' {
+                            io.add_input_character(ch)
+                        }
+                    }
                 }
             }
             WindowEvent::CursorMoved { position, .. } => {
